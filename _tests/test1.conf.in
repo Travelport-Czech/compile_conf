@@ -1,0 +1,23 @@
+#tento soubor vznikl generovanim pomoci compile_conf
+DBHost:  db2
+DBUser:  srbt
+#C:DBPassword: {~???}
+DBPassword: heheslo
+DBName:  ao3_Xena_srbt
+#C:DBClientCharset:   utf8
+DBClientCharset: 	utf16
+AirlineFileServerUrl: @ao-{file_id}-{code}.gif
+
+DBRctHost:     localhost
+DBRctUser:     root
+#C:DBRctPassword:  {~???}
+DBRctPassword:	rctHeslo
+DBRctName:     ao3_rctdb_jira
+DBRctClientCharset:  utf8
+
+#RctFileServerUrl: @ nahrazeni provedou WS az k casti .../cache/
+RctFileServerUrl: http://fiona.in.idc.cz/jira/Main/ao3-fileserver/www/cache/rct-{file_id}-{file_name}
+
+BackendTypeId:		TESTING
+Pokus: pokus
+Hokus: hokus

@@ -1,0 +1,26 @@
+# tento soubor vznikl generovanim pomoci compile_conf z test1.conf.sample
+DBHost:  db-prod01.gol.int.hous.prg.mynet.cz
+DBUser:  ao3gol_srbt
+#C:DBPassword: {~???}
+DBPassword: heheslo
+DBName:  ao3_gol_xena
+Port: 1234
+#C:DBClientCharset:   utf8
+DBClientCharset: 	utf16
+AirlineFileServerUrl: @ao-{file_id}-{code}.gif
+
+DBRctHost:     localhost
+#C:DBRctUser:     root
+DBRctUser:	karel
+#C:DBRctPassword:  {~???}
+DBRctPassword:	rctHeslo
+DBRctName:     ao3_rctdb_jira
+#C:DBRctClientCharset:  utf8
+DBRctClientCharset:  utf8
+
+#RctFileServerUrl: @ nahrazeni provedou WS az k casti .../cache/
+RctFileServerUrl: http://fiona.in.idc.cz/jira/Main/ao3-fileserver/www/cache/rct-{file_id}-{file_name}
+
+BackendTypeId:		TESTING
+Pokus: pokus
+Hokus: hokus

@@ -1,0 +1,36 @@
+#compilable conf
+#P:DBHost:  db-prod01.gol.int.hous.prg.mynet.cz
+#T:DBHost:  db-test01.gol.int.hous.prg.mynet.cz
+#D:DBHost:  db-devel01.gol.int.hous.prg.mynet.cz
+#I:DBHost:  db4
+#P:DBUser:  ao3gol_{~user}
+#T:DBUser:  ao3goltest
+#D:DBUser:  ao3goldevel
+#I:DBUser:  {~user}
+#P?: Doplnujici zprava pro pristi povinny parametr
+#P:DBPassword: {~???}
+#T:DBPassword: {~???}
+#D:DBPassword: {~???}
+#I:DBPassword:  heslo
+#P:DBName:  ao3_gol_{~VERSION}
+#T:DBName:  ao3_gol_test
+#D:DBName:  ao3_gol_devel
+#I:DBName:  ao3_{~Version}_{~user}
+#P!: Vlozena zprava s informaci pro uzivatele, ktera se ma zobrazit
+#I!: Vlozena zprava s informaci pro uzivatele, ktera se nema zobrazit
+Port: {~ao3_port}
+DBClientCharset:   utf8
+AirlineFileServerUrl: @ao-{file_id}-{code}.gif
+
+DBRctHost:     localhost
+DBRctUser:     root
+DBRctPassword:  {~???}
+DBRctName:     ao3_rctdb_jira
+#PTDI+:DBRctClientCharset:  utf8
+
+#RctFileServerUrl: @ nahrazeni provedou WS az k casti .../cache/
+RctFileServerUrl: http://fiona.in.idc.cz/jira/Main/ao3-fileserver/www/cache/rct-{file_id}-{file_name}
+
+BackendTypeId:		TESTING
+Pokus: {~#LNq2yxVUL1EE7FuGZC2V6XXKOUvn}
+Hokus: {~$Fl8EItDG1cHESlpyE6DidDwgkpHQLiPcm8lcqg+hDeiHckw9LmlXUEUmDEQMBVGLQVPLKPVWW/Pe0IORs2D38PzUEC4lfGkoz0ZgScon3L5l5YFFMbpehLikt94eahJcGJ+hL/FAwuDj3ZOIxBPuw+6zWi9S/7AttO+GH2UOW8hKCW6pfOkB2vZ/42BvhIm7GhgtY3mWs20cD9DvijzgWtxRBjtFnZCLwmNODXkmeKkXHL8H2GAMo6FKsk31bwtwyVohDzIuhADm4WQ3TWuGqCeAHHE3eXewiU+d/FAC8oPlN6qSz/MPAjEwn2kwXpMg1yMi86ADOe8Fb5xNZtwpHQ==}

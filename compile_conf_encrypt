@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+import argparse
+import sys
+import os.path
+from Crypto.Cipher import AES
+from Crypto.PublicKey import RSA
+from Crypto import Random
+import base64
+
+class CAES:
+  @staticmethod
+  def create_key(filename):
+    randoms = Random.new().read(32)
+    encoded = base64.standard_b64encode(randoms)
+    key = encoded[:32]
+    open(filename, 'w').write(key)
+    return key
+
+  @staticmethod
+  def encrypt(key_value, data):
+    iv = Random.new().read(AES.block_size)
+    encryptor = AES.new(key_value, AES.MODE_CFB, iv)
+    return iv + encryptor.encrypt(data)
+
+  @staticmethod
+  def format_value(encrypted):
+    return'{~#%s}\n' % base64.standard_b64encode(encrypted)
+
+class CRSA:
+  @staticmethod
+  def create_key(filename):
+    # RSA modulus length must be a multiple of 256 and >= 1024
+    modulus_length = 1024*2
+    privatekey = RSA.generate(modulus_length, Random.new().read)
+    publickey = privatekey.publickey()
+    open(filename, 'w').write(publickey.exportKey())
+    open(filename + '.priv', 'w').write(privatekey.exportKey())
+    return publickey.exportKey()
+
+  @staticmethod
+  def encrypt(key_value, data):
+    publickey = RSA.importKey(key_value)
+    encrypted_msg = publickey.encrypt(data, 32)[0]
+    return encrypted_msg
+
+
+  @staticmethod
+  def format_value(encrypted):
+    return'{~$%s}\n' % base64.standard_b64encode(encrypted)
+
+def load_key(filename):
+  return open(filename).read().strip()
+
+parser = argparse.ArgumentParser(description='Encrypt placeholder value for compile_conf')
+parser_cipher = parser.add_mutually_exclusive_group(required=True)
+parser_cipher.add_argument('--aes', help='use symetric cipher AES', action='store_true')
+parser_cipher.add_argument('--rsa', help='use asymetric cipher RSA', action='store_true')
+parser.add_argument('-c', '--create', help='create random key if file with key not exists', action='store_true')
+parser.add_argument('-k', '--key', help='file with key', required=True)
+args = parser.parse_args()
+
+cipher = CAES if args.aes else CRSA
+
+if not os.path.isfile(args.key):
+  if args.create:
+    key_value = cipher.create_key(args.key)
+    sys.stderr.write('New key written in to %s.\n' % args.key)
+  else:
+    sys.stderr.write('File with key "%s" not exists, try use param --create to generate new random key.\n' % args.key)
+    sys.exit(1)
+else:
+  key_value = load_key(args.key)
+  sys.stderr.write('Key loaded from %s.\n' % args.key)
+
+sys.stderr.write('Value to encrypt: ')
+data = raw_input()
+
+encrypted = cipher.encrypt(key_value, data)
+
+sys.stderr.write('Encrypted value: ')
+sys.stdout.write(cipher.format_value(encrypted))
+
