@@ -1,0 +1,4 @@
+{
+  "name": "Travelport-Czech/compile_conf",
+  "description": "Simple builder configuration files from environment, encrypted values or user input"
+}
