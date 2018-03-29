@@ -17,3 +17,9 @@ where
 - **production** defines environment where be config.cfg used
 - **config.sample** is source of configuration - contain definitions for all enviromnents
 - **config.cfg** is output file
+
+Tool is available by composer:
+
+```
+composer require travelport-czech/compile_conf '*'
+```
