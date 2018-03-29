@@ -1,4 +1,5 @@
 {
   "name": "travelport-czech/compile_conf",
-  "description": "Simple builder configuration files from environment, encrypted values or user input"
+  "description": "Simple builder configuration files from environment, encrypted values or user input",
+  "bin": ["compile_conf", "compile_conf_encrypt"]
 }
