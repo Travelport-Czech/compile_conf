@@ -58,6 +58,7 @@ parser_cipher.add_argument('--aes', help='use symetric cipher AES', action='stor
 parser_cipher.add_argument('--rsa', help='use asymetric cipher RSA', action='store_true')
 parser.add_argument('-c', '--create', help='create random key if file with key not exists', action='store_true')
 parser.add_argument('-k', '--key', help='file with key', required=True)
+parser.add_argument('-n', '--check-only', help='it only checks if the key is present, it does not ask for the value to be encrypted.', action='store_true')
 args = parser.parse_args()
 
 cipher = CAES if args.aes else CRSA
@@ -73,11 +74,12 @@ else:
   key_value = load_key(args.key)
   sys.stderr.write('Key loaded from %s.\n' % args.key)
 
-sys.stderr.write('Value to encrypt: ')
-data = raw_input()
+if not args.check_only:
+  sys.stderr.write('Value to encrypt: ')
+  data = raw_input()
 
-encrypted = cipher.encrypt(key_value, data)
+  encrypted = cipher.encrypt(key_value, data)
 
-sys.stderr.write('Encrypted value: ')
-sys.stdout.write(cipher.format_value(encrypted))
+  sys.stderr.write('Encrypted value: ')
+  sys.stdout.write(cipher.format_value(encrypted))
 
