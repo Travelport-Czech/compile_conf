@@ -114,11 +114,19 @@ def decrypt_rsa(crypted_message, rsa_decryption_key):
 def generate_config(prefilling, sample, selected_type, compilable_mark, filename_sample, generated_conf_signature, placeholders, aes_decryption_key, rsa_decryption_key):
   def expand(text):
     def replace_placeholders(match):
+      def validate_decrypted(value):
+        if '"' in value:
+          print_bold_red("Zasifrovana hodnota nesmi obsahovat uvozovky!")
+          sys.exit(1)
+        if "'" in value:
+          print_bold_red("Zasifrovana hodnota nesmi obsahovat apostrof!")
+          sys.exit(1)
+        return value
       name = match.group(1)
       if name[0] == '#':
-        return decrypt_aes(name[1:], aes_decryption_key)
+        return validate_decrypted(decrypt_aes(name[1:], aes_decryption_key))
       if name[0] == '$':
-        return decrypt_rsa(name[1:], rsa_decryption_key)
+        return validate_decrypted(decrypt_rsa(name[1:], rsa_decryption_key))
       if name not in placeholders:
         print_bold_red("Nelze nahradit parametr '%s' na radce %d v souboru %s, zkuste jej doplnit do update.conf a k prekladu pouzivejte samples.sh nebo update.sh." % (name, line_no, filename_sample))
         sys.exit(1)

@@ -77,6 +77,13 @@ else:
 if not args.check_only:
   sys.stderr.write('Value to encrypt: ')
   data = raw_input()
+  if '"' in data:
+    sys.stderr.write("Value to encrypt can't contain char \" (quotation mark) !\n")
+    sys.exit(2)
+
+  if "'" in data:
+    sys.stderr.write("Value to encrypt can't contain char ' (apostrophe) !\n")
+    sys.exit(2)
 
   encrypted = cipher.encrypt(key_value, data)
 

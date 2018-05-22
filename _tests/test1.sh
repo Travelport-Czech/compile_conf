@@ -97,6 +97,42 @@ else
 fi
 rm -f test1a.conf.sample test1a.conf.out test1a.conf
 
+echo
+echo "Test apostrofu v promenne (encoding):"
+if ../compile_conf_encrypt --rsa -k test1.rsa.key <<< "hokus'a"; then
+  echo 'Chyba apostrofu v promenne (encoding)!'
+  result='Failed'
+else
+  echo 'Ok'
+fi
+
+echo
+echo "Test uvozovky v promenne (encoding):"
+if ../compile_conf_encrypt --rsa -k test1.rsa.key <<< 'hokus"a'; then
+  echo 'Chyba uvozovky v promenne (encoding)!'
+  result='Failed'
+else
+  echo 'Ok'
+fi
+
+echo
+echo "Test apostrofu v promenne (decoding):"
+if ../compile_conf -K test1.rsa.key.priv production test1.conf.apost.sample test1.conf.apost; then
+  echo 'Chyba apostrofu v promenne (decoding)!'
+  result='Failed'
+else
+  echo 'Ok'
+fi
+
+echo
+echo "Test uvozovky v promenne (decoding):"
+if ../compile_conf -K test1.rsa.key.priv production test1.conf.quote.sample test1.conf.quote; then
+  echo 'Chyba uvozovky v promenne (decoding)!'
+  result='Failed'
+else
+  echo 'Ok'
+fi
+
 printf '\n\n====== Souhrn ======\n'
 if [[ "$result" == 'Ok' ]]; then
   printf 'Zadny z testu neselhal.\n\n'
