@@ -16,8 +16,6 @@ for stage in production testing internal support devel robots pipeline; do
    rm -f test.stages.conf
 done
 
-
-
 printf '\n\n====== Summary ======\n'
 if [[ "$result" == 'Ok' ]]; then
   printf 'Everything is OK.\n\n'
