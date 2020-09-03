@@ -1,0 +1,8 @@
+#compilable conf without comments support
+#P:production
+#T:testing
+#D:devel
+#I:internal
+#S:support
+#R:robots
+#L:pipeline

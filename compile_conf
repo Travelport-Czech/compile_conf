@@ -14,7 +14,9 @@ conf_types = {
   'testing': 'T',
   'devel': 'D',
   'internal': 'I',
-  'support': 'S'
+  'support': 'S',
+  'robots': 'R',
+  'pipeline': 'L'
 }
 generated_conf_signature = 'tento soubor vznikl generovanim pomoci compile_conf'
 
@@ -133,7 +135,7 @@ def generate_config(prefilling, sample, selected_type, compilable_mark, filename
       return placeholders[name]
     return re.sub(r'\{~([^}]+)\}', replace_placeholders, text)
 
-  r_sample = re.compile(r'^(?P<comment>#|//)(?P<type>[PTDIS?!+]+):(?P<text>.*)$')
+  r_sample = re.compile(r'^(?P<comment>#|//)(?P<type>[PTDISRL?!+]+):(?P<text>.*)$')
   messages = []
   new_config = []
   line_no = 0
