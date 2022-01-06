@@ -1,12 +1,19 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import re
 import os.path
 import sys
 import readline
 import subprocess
-from Crypto.Cipher import AES
-from Crypto.PublicKey import RSA
+try:
+  from Crypto.Cipher import AES
+except ImportError:
+  AES = None
+try:
+  from Crypto.PublicKey import RSA
+except ImportError:
+  RSA = None
+
 import base64
 
 conf_types = {
@@ -219,6 +226,14 @@ def parse_params(argv):
   return (out_argv, out_prefilling, diff_out, aes_key_file, rsa_key_file)
 
 (argv, prefilling, diff_out, aes_key_file, rsa_key_file) = parse_params(sys.argv)
+
+if aes_key_file and not AES:
+  print "Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani aes!"
+  sys.exit(1)
+
+if rsa_key_file and not RSA:
+  print "Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani rsa!"
+  sys.exit(1)
 
 if len(argv) != 4 or argv[1] not in conf_types or not os.path.isfile(argv[2]):
   print "compile_conf [{-k|--aes-key} aes_key_file] [{-K|--rsa-key} rsa_key_file] [{-d|--diff} diff_file] [{-D|--def} comment key value] {%s} sample_file config_file" % ('|'.join(conf_types.keys()))
