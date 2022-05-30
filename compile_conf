@@ -210,7 +210,10 @@ def generate_config(
         return re.sub(r'\{~([^}]+)\}', replace_placeholders, text)
 
     r_sample = re.compile(
-        r'^(?P<comment>#|//)(?P<type>[PTDISRL?!+]+):(?P<text>.*)$')
+        r'^(?P<comment>#|//)(?P<type>[' +
+        ''.join(
+            conf_types.values()) +
+        r'?!+]+):(?P<text>.*)$')
     messages = []
     new_config = []
     line_no = 0

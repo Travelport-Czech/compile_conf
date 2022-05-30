@@ -3,10 +3,16 @@
 import argparse
 import sys
 import os.path
+import math
 from Crypto.Cipher import AES
 from Crypto.PublicKey import RSA
 from Crypto import Random
 import base64
+
+try:
+    import readline
+except ImportError:
+    pass
 
 
 class CAES:
@@ -55,19 +61,38 @@ class CRSA:
             result.reverse()
             return b''.join(result)
 
+        def try_encrypt(publickey, data):
+            try:
+                encrypted_msg = publickey.encrypt(data, 32)[0]
+            except NotImplementedError:
+                if len(data) > publickey.size_in_bytes():
+                    raise ValueError()
+                ct_int = bytes_to_int(data)
+                pt_int = pow(ct_int, publickey.e, publickey.n)
+                encrypted_msg = int_to_bytes(
+                    pt_int, publickey.size_in_bytes()).lstrip(b'\x00')
+            return encrypted_msg
+
+        def try_chunk(publickey, data, divider):
+            chunk_len = int(math.ceil(float(len(data)) / divider))
+            chunks = []
+            while data:
+                chunks.append(try_encrypt(publickey, data[:chunk_len]))
+                data = data[chunk_len:]
+            return chunks
+
         publickey = RSA.importKey(key_value)
-        try:
-            encrypted_msg = publickey.encrypt(data, 32)[0]
-        except NotImplementedError:
-            ct_int = bytes_to_int(data)
-            pt_int = pow(ct_int, publickey.e, publickey.n)
-            encrypted_msg = int_to_bytes(
-                pt_int, publickey.size_in_bytes()).lstrip(b'\x00')
-        return encrypted_msg
+        for divider in range(1, 21):
+            try:
+                return try_chunk(publickey, data, divider)
+            except ValueError:
+                pass
+        return try_chunk(publickey, data, 1)
 
     @staticmethod
     def format_value(encrypted):
-        return'{~$%s}\n' % base64.standard_b64encode(encrypted)
+        return ''.join('{~$%s}\n' % base64.standard_b64encode(chunk)
+                       for chunk in encrypted)
 
 
 def load_key(filename):
