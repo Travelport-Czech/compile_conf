@@ -6,258 +6,334 @@ import sys
 import readline
 import subprocess
 try:
-  from Crypto.Cipher import AES
+    from Crypto.Cipher import AES
 except ImportError:
-  AES = None
+    AES = None
 try:
-  from Crypto.PublicKey import RSA
+    from Crypto.PublicKey import RSA
 except ImportError:
-  RSA = None
+    RSA = None
 
 import base64
 
 conf_types = {
-  'production': 'P',
-  'testing': 'T',
-  'devel': 'D',
-  'internal': 'I',
-  'support': 'S',
-  'robots': 'R',
-  'pipeline': 'L'
+    'production': 'P',
+    'testing': 'T',
+    'devel': 'D',
+    'internal': 'I',
+    'support': 'S',
+    'robots': 'R',
+    'pipeline': 'L'
 }
 generated_conf_signature = 'tento soubor vznikl generovanim pomoci compile_conf'
 
+
 class color:
-  PURPLE = '\033[95m'
-  CYAN = '\033[96m'
-  DARKCYAN = '\033[36m'
-  BLUE = '\033[94m'
-  GREEN = '\033[92m'
-  YELLOW = '\033[93m'
-  RED = '\033[91m'
-  BOLD = '\033[1m'
-  UNDERLINE = '\033[4m'
-  END = '\033[0m'
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
 
 def reduce_whitespaces(text):
-  text = text.strip().replace('\t', ' ')
-  while '  ' in text:
-    text = text.replace('  ', ' ')
-  return text
+    text = text.strip().replace('\t', ' ')
+    while '  ' in text:
+        text = text.replace('  ', ' ')
+    return text
+
 
 def prefilling_to_key(text):
-  return reduce_whitespaces(text)
+    return reduce_whitespaces(text)
+
 
 def read_file(filename):
-  if os.path.isfile(filename):
-    return map(lambda x: x.rstrip('\n'), open(filename, 'r').readlines())
-  else:
-    return []
+    if os.path.isfile(filename):
+        return map(lambda x: x.rstrip('\n'), open(filename, 'r').readlines())
+    else:
+        return []
+
 
 def get_compilable_mark(sample):
-  r_compilable = re.compile(r'\s*(#|//|/\*)\s*compilable\s*conf\s*(without\s*comments\s*support)?', re.I)
-  for line in sample:
-    m_compilable = r_compilable.match(line)
-    if m_compilable:
-      comments_supported = m_compilable.group(2) is None
-      return (m_compilable.group(1), line, comments_supported)
-  return None
+    r_compilable = re.compile(
+        r'\s*(#|//|/\*)\s*compilable\s*conf\s*(without\s*comments\s*support)?', re.I)
+    for line in sample:
+        m_compilable = r_compilable.match(line)
+        if m_compilable:
+            comments_supported = m_compilable.group(2) is None
+            return (m_compilable.group(1), line, comments_supported)
+    return None
+
 
 def get_prefilling(config):
-  prefilling = {}
-  m_config = None
-  r_config = re.compile(r'^(?P<comment>#|//)C:(?P<text>.*)$')
-  for line in config:
-    if m_config:
-      prefilling[prefilling_to_key(m_config.group('text'))] = (m_config.group('comment'), line)
-      m_config = None
-    m_config = r_config.match(line)
-  return prefilling
+    prefilling = {}
+    m_config = None
+    r_config = re.compile(r'^(?P<comment>#|//)C:(?P<text>.*)$')
+    for line in config:
+        if m_config:
+            prefilling[prefilling_to_key(m_config.group('text'))] = (
+                m_config.group('comment'), line)
+            m_config = None
+        m_config = r_config.match(line)
+    return prefilling
 
-def append_prefilling(new_config, prefilling, text, line_no, comment, messages):
-  key = prefilling_to_key(text)
-  if key in prefilling:
-    new_config.append('%sC:%s' % (prefilling[key][0], text))
-    new_config.append(prefilling[key][1])
+
+def append_prefilling(
+        new_config,
+        prefilling,
+        text,
+        line_no,
+        comment,
+        messages):
+    key = prefilling_to_key(text)
+    if key in prefilling:
+        new_config.append('%sC:%s' % (prefilling[key][0], text))
+        new_config.append(prefilling[key][1])
+        if r'{~???}' in text:
+            del messages[:]
+        return True
     if r'{~???}' in text:
-      del messages[:]
-    return True
-  if r'{~???}' in text:
-    if messages:
-      print
-      print '\n'.join(messages)
-      del messages[:]
-    print 'Chybejici informace pro parametr "%s" na radce %d.' % (text, line_no)
-    value = None
-    while not value:
-      value = raw_input('Zadejte kompletni radek (napr. %s%s%s): ' % (color.BOLD, text.replace(r'{~???}', 'superheslo'), color.END))
-      if not value.strip():
-        print 'Parametr musi byt zadan!'
-    prefilling[prefilling_to_key(text)] = (comment, value)
-    append_prefilling(new_config, prefilling, text, line_no, comment, messages)
-    return True
-  return False
+        if messages:
+            print
+            print '\n'.join(messages)
+            del messages[:]
+        print 'Chybejici informace pro parametr "%s" na radce %d.' % (
+            text, line_no)
+        value = None
+        while not value:
+            value = raw_input(
+                'Zadejte kompletni radek (napr. %s%s%s): ' %
+                (color.BOLD, text.replace(
+                    r'{~???}', 'superheslo'), color.END))
+            if not value.strip():
+                print 'Parametr musi byt zadan!'
+        prefilling[prefilling_to_key(text)] = (comment, value)
+        append_prefilling(
+            new_config,
+            prefilling,
+            text,
+            line_no,
+            comment,
+            messages)
+        return True
+    return False
+
 
 def create_placeholders_dict():
-  placeholders = dict(os.environ)
-  if 'user' not in placeholders and 'USER' in placeholders:
-    placeholders['user'] = placeholders['USER']
-  return placeholders
+    placeholders = dict(os.environ)
+    if 'user' not in placeholders and 'USER' in placeholders:
+        placeholders['user'] = placeholders['USER']
+    return placeholders
+
 
 def decrypt_aes(crypted_message, aes_decryption_key):
-  if aes_decryption_key is None:
-    print_bold_red('Vzor obsahuje zasifrovane hodnoty. Zadejte parametr --aes-key se souborem s klicem.')
-    sys.exit(1)
-  decoded = base64.standard_b64decode(crypted_message)
-  iv = decoded[:AES.block_size]
-  decryptor = AES.new(aes_decryption_key, AES.MODE_CFB, iv)
-  return decryptor.decrypt(decoded[AES.block_size:])
+    if aes_decryption_key is None:
+        print_bold_red(
+            'Vzor obsahuje zasifrovane hodnoty. Zadejte parametr --aes-key se souborem s klicem.')
+        sys.exit(1)
+    decoded = base64.standard_b64decode(crypted_message)
+    iv = decoded[:AES.block_size]
+    decryptor = AES.new(aes_decryption_key, AES.MODE_CFB, iv)
+    return decryptor.decrypt(decoded[AES.block_size:])
+
 
 def decrypt_rsa(crypted_message, rsa_decryption_key):
-  def bytes_to_int(bytes):
-      result = 0
-      for b in bytes:
-          result = result * 256 + ord(b)
-      return result
+    def bytes_to_int(bytes):
+        result = 0
+        for b in bytes:
+            result = result * 256 + ord(b)
+        return result
 
-  def int_to_bytes(value, length):
-      result = []
-      for i in range(0, length):
-          result.append(chr(value >> (i * 8) & 0xff))
-      result.reverse()
-      return b''.join(result)
+    def int_to_bytes(value, length):
+        result = []
+        for i in range(0, length):
+            result.append(chr(value >> (i * 8) & 0xff))
+        result.reverse()
+        return b''.join(result)
 
-  if rsa_decryption_key is None:
-    print_bold_red('Vzor obsahuje zasifrovane hodnoty. Zadejte parametr --rsa-key se souborem s klicem.')
-    sys.exit(1)
-  decoded = base64.standard_b64decode(crypted_message)
-  key = RSA.importKey(rsa_decryption_key)
-  try:
-      decrypted_message = key.decrypt(decoded)
-  except NotImplementedError:
-      ct_int = bytes_to_int(decoded)
-      pt_int = pow(ct_int, key.d, key.n)
-      decrypted_message = int_to_bytes(pt_int, key.size_in_bytes()).lstrip(b'\x00')
-  return decrypted_message
-
-def generate_config(prefilling, sample, selected_type, compilable_mark, filename_sample, generated_conf_signature, placeholders, aes_decryption_key, rsa_decryption_key):
-  def expand(text):
-    def replace_placeholders(match):
-      def validate_decrypted(value):
-        if '"' in value:
-          print_bold_red("Zasifrovana hodnota nesmi obsahovat uvozovky!")
-          sys.exit(1)
-        if "'" in value:
-          print_bold_red("Zasifrovana hodnota nesmi obsahovat apostrof!")
-          sys.exit(1)
-        return value
-      name = match.group(1)
-      if name[0] == '#':
-        return validate_decrypted(decrypt_aes(name[1:], aes_decryption_key))
-      if name[0] == '$':
-        return validate_decrypted(decrypt_rsa(name[1:], rsa_decryption_key))
-      if name not in placeholders:
-        print_bold_red("Nelze nahradit parametr '%s' na radce %d v souboru %s, zkuste jej doplnit do update.conf a k prekladu pouzivejte samples.sh nebo update.sh." % (name, line_no, filename_sample))
+    if rsa_decryption_key is None:
+        print_bold_red(
+            'Vzor obsahuje zasifrovane hodnoty. Zadejte parametr --rsa-key se souborem s klicem.')
         sys.exit(1)
-      return placeholders[name]
-    return re.sub(r'\{~([^}]+)\}', replace_placeholders, text)
+    decoded = base64.standard_b64decode(crypted_message)
+    key = RSA.importKey(rsa_decryption_key)
+    try:
+        decrypted_message = key.decrypt(decoded)
+    except NotImplementedError:
+        ct_int = bytes_to_int(decoded)
+        pt_int = pow(ct_int, key.d, key.n)
+        decrypted_message = int_to_bytes(
+            pt_int, key.size_in_bytes()).lstrip(b'\x00')
+    return decrypted_message
 
-  r_sample = re.compile(r'^(?P<comment>#|//)(?P<type>[PTDISRL?!+]+):(?P<text>.*)$')
-  messages = []
-  new_config = []
-  line_no = 0
-  for line in sample:
-    line_no += 1
-    if line == compilable_mark[1]:
-      if compilable_mark[2]:
-        new_config.append('%s %s z %s' % (compilable_mark[0], generated_conf_signature, filename_sample))
-      continue
-    m_sample = r_sample.match(line)
-    if m_sample:
-      typ = m_sample.group('type')
-      text = m_sample.group('text')
-      if selected_type in typ:
-        if '!' in typ:
-          print color.BOLD + text + color.END,
-        elif '?' in typ:
-          messages.append(expand(text))
+
+def generate_config(
+        prefilling,
+        sample,
+        selected_type,
+        compilable_mark,
+        filename_sample,
+        generated_conf_signature,
+        placeholders,
+        aes_decryption_key,
+        rsa_decryption_key):
+    def expand(text):
+        def replace_placeholders(match):
+            def validate_decrypted(value):
+                if '"' in value:
+                    print_bold_red(
+                        "Zasifrovana hodnota nesmi obsahovat uvozovky!")
+                    sys.exit(1)
+                if "'" in value:
+                    print_bold_red(
+                        "Zasifrovana hodnota nesmi obsahovat apostrof!")
+                    sys.exit(1)
+                return value
+            name = match.group(1)
+            if name[0] == '#':
+                return validate_decrypted(
+                    decrypt_aes(name[1:], aes_decryption_key))
+            if name[0] == '$':
+                return validate_decrypted(
+                    decrypt_rsa(name[1:], rsa_decryption_key))
+            if name not in placeholders:
+                print_bold_red(
+                    "Nelze nahradit parametr '%s' na radce %d v souboru %s, zkuste jej doplnit do update.conf a k prekladu pouzivejte samples.sh nebo update.sh." %
+                    (name, line_no, filename_sample))
+                sys.exit(1)
+            return placeholders[name]
+        return re.sub(r'\{~([^}]+)\}', replace_placeholders, text)
+
+    r_sample = re.compile(
+        r'^(?P<comment>#|//)(?P<type>[PTDISRL?!+]+):(?P<text>.*)$')
+    messages = []
+    new_config = []
+    line_no = 0
+    for line in sample:
+        line_no += 1
+        if line == compilable_mark[1]:
+            if compilable_mark[2]:
+                new_config.append(
+                    '%s %s z %s' %
+                    (compilable_mark[0],
+                     generated_conf_signature,
+                     filename_sample))
+            continue
+        m_sample = r_sample.match(line)
+        if m_sample:
+            typ = m_sample.group('type')
+            text = m_sample.group('text')
+            if selected_type in typ:
+                if '!' in typ:
+                    print color.BOLD + text + color.END,
+                elif '?' in typ:
+                    messages.append(expand(text))
+                else:
+                    if '+' in typ:
+                        key = prefilling_to_key(text)
+                        if key not in prefilling:
+                            prefilling[prefilling_to_key(text)] = (
+                                m_sample.group('comment'), text)
+                    if not append_prefilling(
+                            new_config,
+                            prefilling,
+                            text,
+                            line_no,
+                            m_sample.group('comment'),
+                            messages):
+                        new_config.append(expand(m_sample.group('text')))
         else:
-          if '+' in typ:
-            key = prefilling_to_key(text)
-            if key not in prefilling:
-              prefilling[prefilling_to_key(text)] = (m_sample.group('comment'), text)
-          if not append_prefilling(new_config, prefilling, text, line_no, m_sample.group('comment'), messages):
-            new_config.append(expand(m_sample.group('text')))
-    else:
-      if not append_prefilling(new_config, prefilling, line, line_no, '#', messages):
-        new_config.append(expand(line))
-  return new_config
+            if not append_prefilling(
+                new_config,
+                prefilling,
+                line,
+                line_no,
+                '#',
+                    messages):
+                new_config.append(expand(line))
+    return new_config
+
 
 def is_generated_config(config, generated_conf_signature):
-  signature = reduce_whitespaces(generated_conf_signature)
-  for line in config:
-    if signature in reduce_whitespaces(line):
-      return True
-  return False
+    signature = reduce_whitespaces(generated_conf_signature)
+    for line in config:
+        if signature in reduce_whitespaces(line):
+            return True
+    return False
+
 
 def load_key(key_filename):
-  if key_filename and os.path.isfile(key_filename):
-    with open(key_filename) as kf:
-      decryption_key = kf.read().strip()
-  else:
-    decryption_key = None
-  return decryption_key
+    if key_filename and os.path.isfile(key_filename):
+        with open(key_filename) as kf:
+            decryption_key = kf.read().strip()
+    else:
+        decryption_key = None
+    return decryption_key
+
 
 def config_can_be_overwritten(config, generated_conf_signature):
-  return len(config) == 0 or is_generated_config(config, generated_conf_signature)
+    return len(config) == 0 or is_generated_config(
+        config, generated_conf_signature)
+
 
 def print_bold_blue(text):
-  print color.BOLD+color.BLUE + text + color.END
+    print color.BOLD + color.BLUE + text + color.END
+
 
 def print_bold_green(text):
-  print color.BOLD+color.GREEN + text + color.END
+    print color.BOLD + color.GREEN + text + color.END
+
 
 def print_bold_red(text):
-  print color.BOLD+color.RED + text + color.END
+    print color.BOLD + color.RED + text + color.END
+
 
 def parse_params(argv):
-  out_argv = []
-  out_prefilling = {}
-  aes_key_file = None
-  rsa_key_file = None
-  diff_out = None
-  i = 0
-  while i < len(argv):
-    if argv[i] == '-d' or argv[i] == '--diff':
-      diff_out = argv[i+1]
-      i += 2
-    elif argv[i] == '-D' or argv[i] == '--def':
-      out_prefilling[prefilling_to_key(argv[i+2])] = (argv[i+1], argv[i+3])
-      i += 4
-    elif argv[i] == '-k' or argv[i] == '--aes-key':
-      aes_key_file = argv[i+1]
-      i += 2
-    elif argv[i] == '-K' or argv[i] == '--rsa-key':
-      rsa_key_file = argv[i+1]
-      i += 2
-    else:
-      out_argv.append(argv[i])
-      i += 1
-  return (out_argv, out_prefilling, diff_out, aes_key_file, rsa_key_file)
+    out_argv = []
+    out_prefilling = {}
+    aes_key_file = None
+    rsa_key_file = None
+    diff_out = None
+    i = 0
+    while i < len(argv):
+        if argv[i] == '-d' or argv[i] == '--diff':
+            diff_out = argv[i + 1]
+            i += 2
+        elif argv[i] == '-D' or argv[i] == '--def':
+            out_prefilling[prefilling_to_key(
+                argv[i + 2])] = (argv[i + 1], argv[i + 3])
+            i += 4
+        elif argv[i] == '-k' or argv[i] == '--aes-key':
+            aes_key_file = argv[i + 1]
+            i += 2
+        elif argv[i] == '-K' or argv[i] == '--rsa-key':
+            rsa_key_file = argv[i + 1]
+            i += 2
+        else:
+            out_argv.append(argv[i])
+            i += 1
+    return (out_argv, out_prefilling, diff_out, aes_key_file, rsa_key_file)
+
 
 (argv, prefilling, diff_out, aes_key_file, rsa_key_file) = parse_params(sys.argv)
 
 if aes_key_file and not AES:
-  print "Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani aes!"
-  sys.exit(1)
+    print "Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani aes!"
+    sys.exit(1)
 
 if rsa_key_file and not RSA:
-  print "Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani rsa!"
-  sys.exit(1)
+    print "Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani rsa!"
+    sys.exit(1)
 
 if len(argv) != 4 or argv[1] not in conf_types or not os.path.isfile(argv[2]):
-  print "compile_conf [{-k|--aes-key} aes_key_file] [{-K|--rsa-key} rsa_key_file] [{-d|--diff} diff_file] [{-D|--def} comment key value] {%s} sample_file config_file" % ('|'.join(conf_types.keys()))
-  print """
+    print "compile_conf [{-k|--aes-key} aes_key_file] [{-K|--rsa-key} rsa_key_file] [{-d|--diff} diff_file] [{-D|--def} comment key value] {%s} sample_file config_file" % (
+        '|'.join(conf_types.keys()))
+    print """
   Podle sample vygeneruje config prislusneho typu.
   Sample musi obsahovat komentar "compilable conf", jinak generator config nevygeneruje.
   Pokud config jiz existuje, musi byt prazdny, nebo obsahovat komentar s informaci, ze byl vygenerovan.
@@ -281,13 +357,14 @@ if len(argv) != 4 or argv[1] not in conf_types or not os.path.isfile(argv[2]):
     #TD:radek_samplu_k_pouziti_na_testu_a_develu
   Pokud je mezi typy i znak !, nebude radek vlozen do generovaneho configu, jen vypsan na obrazovku.
   Pokud je mezi typy i znak ?, nebude radek vlozen do generovaneho configu, jen vypsan na obrazovku pred nejblizsim vynucenym zadanim {~???}.
-  Pokud je mezi typy i znak +, bude spolu s radkem vlozena i sekvence #C: branici jeho pregenerovani. 
+  Pokud je mezi typy i znak +, bude spolu s radkem vlozena i sekvence #C: branici jeho pregenerovani.
   Parametr -d zajisti, ze do zadaneho souboru je pridan diff mezi novou a puvodni konfiguraci.
   Jsou dostupne tyto typy:
    """,
-  print '\n    '.join(map(lambda x: '%s - %s' % (conf_types[x], x), conf_types.keys()))
+    print '\n    '.join(map(lambda x: '%s - %s' %
+                            (conf_types[x], x), conf_types.keys()))
 
-  sys.exit()
+    sys.exit()
 
 selected_type = conf_types[argv[1]]
 filename_sample = argv[2]
@@ -298,15 +375,18 @@ sample = read_file(filename_sample)
 compilable_mark = get_compilable_mark(sample)
 
 if not compilable_mark:
-  print "Soubor '%s' jeste neni pripraven pro generovani configu. Pripravenost potvrdte pridanim komentare 'compilable conf' do souboru." % filename_sample
-  sys.exit()
+    print "Soubor '%s' jeste neni pripraven pro generovani configu. Pripravenost potvrdte pridanim komentare 'compilable conf' do souboru." % filename_sample
+    sys.exit()
 
 
 config = read_file(filename_config)
 
-if compilable_mark[2] and not config_can_be_overwritten(config, generated_conf_signature):
-  print_bold_red("Soubor '%s' nemuze byt prepsan. Pokud ma byt opravdu pregenerovan, smazte jej, nebo do nej pridejte komentar '%s'." % (filename_config, generated_conf_signature))
-  sys.exit()
+if compilable_mark[2] and not config_can_be_overwritten(
+        config, generated_conf_signature):
+    print_bold_red(
+        "Soubor '%s' nemuze byt prepsan. Pokud ma byt opravdu pregenerovan, smazte jej, nebo do nej pridejte komentar '%s'." %
+        (filename_config, generated_conf_signature))
+    sys.exit()
 
 print ("Generuji %s z %s ... " % (filename_config, filename_sample)),
 prefilling.update(get_prefilling(config))
@@ -315,23 +395,33 @@ placeholders = create_placeholders_dict()
 aes_decryption_key = load_key(aes_key_file)
 rsa_decryption_key = load_key(rsa_key_file)
 
-new_config = generate_config(prefilling, sample, selected_type, compilable_mark, filename_sample, generated_conf_signature, placeholders, aes_decryption_key, rsa_decryption_key)
+new_config = generate_config(
+    prefilling,
+    sample,
+    selected_type,
+    compilable_mark,
+    filename_sample,
+    generated_conf_signature,
+    placeholders,
+    aes_decryption_key,
+    rsa_decryption_key)
 
 if config == new_config:
-  print_bold_green("beze zmeny")
+    print_bold_green("beze zmeny")
 else:
-  filename_config_old = filename_config+'.old'
-  if len(config) > 0:
-    if os.path.isfile(filename_config_old):
-      os.remove(filename_config_old)
-    os.rename(filename_config, filename_config_old)
-  open(filename_config, 'w').write('\n'.join(new_config)+'\n')
-  if len(config) == 0:
-    if diff_out:
-      subprocess.call(['diff', '-N', '-u', '/dev/null', filename_config], stdout=open(diff_out, 'a'))
-    print_bold_blue("vytvoren novy")
-  else:
-    if diff_out:
-      subprocess.call(['diff', '-N', '-u', filename_config_old, filename_config], stdout=open(diff_out, 'a'))
-    print_bold_blue("prepsan")
-
+    filename_config_old = filename_config + '.old'
+    if len(config) > 0:
+        if os.path.isfile(filename_config_old):
+            os.remove(filename_config_old)
+        os.rename(filename_config, filename_config_old)
+    open(filename_config, 'w').write('\n'.join(new_config) + '\n')
+    if len(config) == 0:
+        if diff_out:
+            subprocess.call(['diff', '-N', '-u', '/dev/null',
+                            filename_config], stdout=open(diff_out, 'a'))
+        print_bold_blue("vytvoren novy")
+    else:
+        if diff_out:
+            subprocess.call(['diff', '-N', '-u', filename_config_old,
+                            filename_config], stdout=open(diff_out, 'a'))
+        print_bold_blue("prepsan")

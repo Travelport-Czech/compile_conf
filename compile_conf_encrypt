@@ -8,102 +8,125 @@ from Crypto.PublicKey import RSA
 from Crypto import Random
 import base64
 
+
 class CAES:
-  @staticmethod
-  def create_key(filename):
-    randoms = Random.new().read(32)
-    encoded = base64.standard_b64encode(randoms)
-    key = encoded[:32]
-    open(filename, 'w').write(key)
-    return key
+    @staticmethod
+    def create_key(filename):
+        randoms = Random.new().read(32)
+        encoded = base64.standard_b64encode(randoms)
+        key = encoded[:32]
+        open(filename, 'w').write(key)
+        return key
 
-  @staticmethod
-  def encrypt(key_value, data):
-    iv = Random.new().read(AES.block_size)
-    encryptor = AES.new(key_value, AES.MODE_CFB, iv)
-    return iv + encryptor.encrypt(data)
+    @staticmethod
+    def encrypt(key_value, data):
+        iv = Random.new().read(AES.block_size)
+        encryptor = AES.new(key_value, AES.MODE_CFB, iv)
+        return iv + encryptor.encrypt(data)
 
-  @staticmethod
-  def format_value(encrypted):
-    return'{~#%s}\n' % base64.standard_b64encode(encrypted)
+    @staticmethod
+    def format_value(encrypted):
+        return'{~#%s}\n' % base64.standard_b64encode(encrypted)
+
 
 class CRSA:
-  @staticmethod
-  def create_key(filename):
-    # RSA modulus length must be a multiple of 256 and >= 1024
-    modulus_length = 1024*2
-    privatekey = RSA.generate(modulus_length, Random.new().read)
-    publickey = privatekey.publickey()
-    open(filename, 'w').write(publickey.exportKey())
-    open(filename + '.priv', 'w').write(privatekey.exportKey())
-    return publickey.exportKey()
+    @staticmethod
+    def create_key(filename):
+        # RSA modulus length must be a multiple of 256 and >= 1024
+        modulus_length = 1024 * 2
+        privatekey = RSA.generate(modulus_length, Random.new().read)
+        publickey = privatekey.publickey()
+        open(filename, 'w').write(publickey.exportKey())
+        open(filename + '.priv', 'w').write(privatekey.exportKey())
+        return publickey.exportKey()
 
-  @staticmethod
-  def encrypt(key_value, data):
-    def bytes_to_int(bytes):
-        result = 0
-        for b in bytes:
-            result = result * 256 + ord(b)
-        return result
+    @staticmethod
+    def encrypt(key_value, data):
+        def bytes_to_int(bytes):
+            result = 0
+            for b in bytes:
+                result = result * 256 + ord(b)
+            return result
 
-    def int_to_bytes(value, length):
-        result = []
-        for i in range(0, length):
-            result.append(chr(value >> (i * 8) & 0xff))
-        result.reverse()
-        return b''.join(result)
+        def int_to_bytes(value, length):
+            result = []
+            for i in range(0, length):
+                result.append(chr(value >> (i * 8) & 0xff))
+            result.reverse()
+            return b''.join(result)
 
-    publickey = RSA.importKey(key_value)
-    try:
-        encrypted_msg = publickey.encrypt(data, 32)[0]
-    except NotImplementedError:
-        ct_int = bytes_to_int(data)
-        pt_int = pow(ct_int, publickey.e, publickey.n)
-        encrypted_msg = int_to_bytes(pt_int, publickey.size_in_bytes()).lstrip(b'\x00')
-    return encrypted_msg
+        publickey = RSA.importKey(key_value)
+        try:
+            encrypted_msg = publickey.encrypt(data, 32)[0]
+        except NotImplementedError:
+            ct_int = bytes_to_int(data)
+            pt_int = pow(ct_int, publickey.e, publickey.n)
+            encrypted_msg = int_to_bytes(
+                pt_int, publickey.size_in_bytes()).lstrip(b'\x00')
+        return encrypted_msg
 
-  @staticmethod
-  def format_value(encrypted):
-    return'{~$%s}\n' % base64.standard_b64encode(encrypted)
+    @staticmethod
+    def format_value(encrypted):
+        return'{~$%s}\n' % base64.standard_b64encode(encrypted)
+
 
 def load_key(filename):
-  return open(filename).read().strip()
+    return open(filename).read().strip()
 
-parser = argparse.ArgumentParser(description='Encrypt placeholder value for compile_conf')
+
+parser = argparse.ArgumentParser(
+    description='Encrypt placeholder value for compile_conf')
 parser_cipher = parser.add_mutually_exclusive_group(required=True)
-parser_cipher.add_argument('--aes', help='use symetric cipher AES', action='store_true')
-parser_cipher.add_argument('--rsa', help='use asymetric cipher RSA', action='store_true')
-parser.add_argument('-c', '--create', help='create random key if file with key not exists', action='store_true')
+parser_cipher.add_argument(
+    '--aes',
+    help='use symetric cipher AES',
+    action='store_true')
+parser_cipher.add_argument(
+    '--rsa',
+    help='use asymetric cipher RSA',
+    action='store_true')
+parser.add_argument(
+    '-c',
+    '--create',
+    help='create random key if file with key not exists',
+    action='store_true')
 parser.add_argument('-k', '--key', help='file with key', required=True)
-parser.add_argument('-n', '--check-only', help='it only checks if the key is present, it does not ask for the value to be encrypted.', action='store_true')
+parser.add_argument(
+    '-n',
+    '--check-only',
+    help='it only checks if the key is present, it does not ask for the value to be encrypted.',
+    action='store_true')
 args = parser.parse_args()
 
 cipher = CAES if args.aes else CRSA
 
 if not os.path.isfile(args.key):
-  if args.create:
-    key_value = cipher.create_key(args.key)
-    sys.stderr.write('New key written in to %s.\n' % args.key)
-  else:
-    sys.stderr.write('File with key "%s" not exists, try use param --create to generate new random key.\n' % args.key)
-    sys.exit(1)
+    if args.create:
+        key_value = cipher.create_key(args.key)
+        sys.stderr.write('New key written in to %s.\n' % args.key)
+    else:
+        sys.stderr.write(
+            'File with key "%s" not exists, try use param --create to generate new random key.\n' %
+            args.key)
+        sys.exit(1)
 else:
-  key_value = load_key(args.key)
-  sys.stderr.write('Key loaded from %s.\n' % args.key)
+    key_value = load_key(args.key)
+    sys.stderr.write('Key loaded from %s.\n' % args.key)
 
 if not args.check_only:
-  sys.stderr.write('Value to encrypt: ')
-  data = raw_input()
-  if '"' in data:
-    sys.stderr.write("Value to encrypt can't contain char \" (quotation mark) !\n")
-    sys.exit(2)
+    sys.stderr.write('Value to encrypt: ')
+    data = raw_input()
+    if '"' in data:
+        sys.stderr.write(
+            "Value to encrypt can't contain char \" (quotation mark) !\n")
+        sys.exit(2)
 
-  if "'" in data:
-    sys.stderr.write("Value to encrypt can't contain char ' (apostrophe) !\n")
-    sys.exit(2)
+    if "'" in data:
+        sys.stderr.write(
+            "Value to encrypt can't contain char ' (apostrophe) !\n")
+        sys.exit(2)
 
-  encrypted = cipher.encrypt(key_value, data)
+    encrypted = cipher.encrypt(key_value, data)
 
-  sys.stderr.write('Encrypted value: ')
-  sys.stdout.write(cipher.format_value(encrypted))
-
+    sys.stderr.write('Encrypted value: ')
+    sys.stdout.write(cipher.format_value(encrypted))
