@@ -114,11 +114,31 @@ def decrypt_aes(crypted_message, aes_decryption_key):
   return decryptor.decrypt(decoded[AES.block_size:])
 
 def decrypt_rsa(crypted_message, rsa_decryption_key):
+  def bytes_to_int(bytes):
+      result = 0
+      for b in bytes:
+          result = result * 256 + ord(b)
+      return result
+
+  def int_to_bytes(value, length):
+      result = []
+      for i in range(0, length):
+          result.append(chr(value >> (i * 8) & 0xff))
+      result.reverse()
+      return b''.join(result)
+
   if rsa_decryption_key is None:
     print_bold_red('Vzor obsahuje zasifrovane hodnoty. Zadejte parametr --rsa-key se souborem s klicem.')
     sys.exit(1)
   decoded = base64.standard_b64decode(crypted_message)
-  return RSA.importKey(rsa_decryption_key).decrypt(decoded)
+  key = RSA.importKey(rsa_decryption_key)
+  try:
+      decrypted_message = key.decrypt(decoded)
+  except NotImplementedError:
+      ct_int = bytes_to_int(decoded)
+      pt_int = pow(ct_int, key.d, key.n)
+      decrypted_message = int_to_bytes(pt_int, key.size_in_bytes()).lstrip(b'\x00')
+  return decrypted_message
 
 def generate_config(prefilling, sample, selected_type, compilable_mark, filename_sample, generated_conf_signature, placeholders, aes_decryption_key, rsa_decryption_key):
   def expand(text):

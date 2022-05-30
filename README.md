@@ -23,3 +23,5 @@ Tool is available by composer:
 ```
 composer require travelport-czech/compile_conf '*'
 ```
+
+Depends on package [PyCrypto](https://pypi.org/project/pycrypto/)(deprecated) or [PyCryptodome](https://pypi.org/project/pycryptodome/)(recommended)

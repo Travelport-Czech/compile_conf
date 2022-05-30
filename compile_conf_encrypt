@@ -40,10 +40,27 @@ class CRSA:
 
   @staticmethod
   def encrypt(key_value, data):
-    publickey = RSA.importKey(key_value)
-    encrypted_msg = publickey.encrypt(data, 32)[0]
-    return encrypted_msg
+    def bytes_to_int(bytes):
+        result = 0
+        for b in bytes:
+            result = result * 256 + ord(b)
+        return result
 
+    def int_to_bytes(value, length):
+        result = []
+        for i in range(0, length):
+            result.append(chr(value >> (i * 8) & 0xff))
+        result.reverse()
+        return b''.join(result)
+
+    publickey = RSA.importKey(key_value)
+    try:
+        encrypted_msg = publickey.encrypt(data, 32)[0]
+    except NotImplementedError:
+        ct_int = bytes_to_int(data)
+        pt_int = pow(ct_int, publickey.e, publickey.n)
+        encrypted_msg = int_to_bytes(pt_int, publickey.size_in_bytes()).lstrip(b'\x00')
+    return encrypted_msg
 
   @staticmethod
   def format_value(encrypted):
