@@ -1,6 +1,6 @@
 {
   "name": "travelport-czech/compile_conf",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "license": "MIT",
   "description": "Simple builder configuration files from environment, encrypted values or user input",
   "bin": ["compile_conf", "compile_conf_encrypt"]
