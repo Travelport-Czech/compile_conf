@@ -169,7 +169,8 @@ def generate_config(
         generated_conf_signature,
         placeholders,
         aes_decryption_key,
-        rsa_decryption_key):
+        rsa_decryption_key,
+        type_chars):
     def expand(text):
         def replace_placeholders(match):
             def validate_decrypted(value):
@@ -198,10 +199,7 @@ def generate_config(
         return re.sub(r'\{~([^}]+)\}', replace_placeholders, text)
 
     r_sample = re.compile(
-        r'^(?P<comment>#|//)(?P<type>[' +
-        ''.join(
-            conf_types.values()) +
-        r'?!+]+):(?P<text>.*)$')
+        r'^(?P<comment>#|//)(?P<type>[' + type_chars + r'?!+]+):(?P<text>.*)$')
     messages = []
     new_config = []
     line_no = 0
@@ -284,45 +282,8 @@ def print_bold_red(text):
     print(color.BOLD + color.RED + text + color.END)
 
 
-def parse_params(argv):
-    out_argv = []
-    out_prefilling = {}
-    aes_key_file = None
-    rsa_key_file = None
-    diff_out = None
-    i = 0
-    while i < len(argv):
-        if argv[i] == '-d' or argv[i] == '--diff':
-            diff_out = argv[i + 1]
-            i += 2
-        elif argv[i] == '-D' or argv[i] == '--def':
-            out_prefilling[prefilling_to_key(
-                argv[i + 2])] = (argv[i + 1], argv[i + 3])
-            i += 4
-        elif argv[i] == '-k' or argv[i] == '--aes-key':
-            aes_key_file = argv[i + 1]
-            i += 2
-        elif argv[i] == '-K' or argv[i] == '--rsa-key':
-            rsa_key_file = argv[i + 1]
-            i += 2
-        else:
-            out_argv.append(argv[i])
-            i += 1
-    return (out_argv, out_prefilling, diff_out, aes_key_file, rsa_key_file)
-
-
-(argv, prefilling, diff_out, aes_key_file, rsa_key_file) = parse_params(sys.argv)
-
-if aes_key_file and not AES:
-    print("Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani aes!")
-    sys.exit(1)
-
-if rsa_key_file and not CRSA:
-    print("Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani rsa!")
-    sys.exit(1)
-
-if len(argv) != 4 or argv[1] not in conf_types or not os.path.isfile(argv[2]):
-    print("compile_conf [{-k|--aes-key} aes_key_file] [{-K|--rsa-key} rsa_key_file] [{-d|--diff} diff_file] [{-D|--def} comment key value] {%s} sample_file config_file" % (
+def print_help():
+    print("\ncompile_conf [{-k|--aes-key} aes_key_file] [{-K|--rsa-key} rsa_key_file] [{-d|--diff} diff_file] [{-D|--def} comment key value] {%s|{-T|--type} type} sample_file config_file" % (
         '|'.join(conf_types.keys())))
     print("""
   Podle sample vygeneruje config prislusneho typu.
@@ -354,12 +315,81 @@ if len(argv) != 4 or argv[1] not in conf_types or not os.path.isfile(argv[2]):
    """, end=' ')
     print('\n    '.join(map(lambda x: '%s - %s' %
                             (conf_types[x], x), conf_types.keys())))
+    print("  Dale lze pouzit parametr -T pro zadani vlastniho typu (zadava se pouze znak typu, napr. -T X).")
 
-    sys.exit()
+def parse_params(argv):
+    out_argv = []
+    out_prefilling = {}
+    aes_key_file = None
+    rsa_key_file = None
+    diff_out = None
+    custom_type = None
+    i = 0
+    while i < len(argv):
+        if argv[i] == '-d' or argv[i] == '--diff':
+            diff_out = argv[i + 1]
+            i += 2
+        elif argv[i] == '-D' or argv[i] == '--def':
+            out_prefilling[prefilling_to_key(
+                argv[i + 2])] = (argv[i + 1], argv[i + 3])
+            i += 4
+        elif argv[i] == '-k' or argv[i] == '--aes-key':
+            aes_key_file = argv[i + 1]
+            i += 2
+        elif argv[i] == '-K' or argv[i] == '--rsa-key':
+            rsa_key_file = argv[i + 1]
+            i += 2
+        elif argv[i] == '-T' or argv[i] == '--type':
+            custom_type = argv[i + 1]
+            i += 2
+        else:
+            out_argv.append(argv[i])
+            i += 1
+    return (out_argv, out_prefilling, diff_out, aes_key_file, rsa_key_file, custom_type)
 
-selected_type = conf_types[argv[1]]
-filename_sample = argv[2]
-filename_config = argv[3]
+
+(argv, prefilling, diff_out, aes_key_file, rsa_key_file, custom_type) = parse_params(sys.argv)
+
+if aes_key_file and not AES:
+    print("Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani aes!")
+    sys.exit(1)
+
+if rsa_key_file and not CRSA:
+    print("Neni nainstalovan modul Crypto.Cipher - nelze pouzit sifrovani rsa!")
+    sys.exit(1)
+
+if custom_type is None:
+    if len(argv) < 4:
+        print("Neni zadan typ configu, soubor s vzorem configu, nebo vystupni soubor!")
+        print_help()
+        sys.exit(1)
+    if argv[1] not in conf_types:
+        print("Neni zadan typ configu! Zadejte jeden z: %s, nebo pouzijte parametr -T." % (
+            ', '.join(conf_types.keys()))
+        )
+        print_help()
+        sys.exit(1)
+    else:
+        selected_type = conf_types[argv[1]]
+        filename_sample = argv[2]
+        filename_config = argv[3]
+else:
+    if len(argv) < 3:
+        print("Neni zadan soubor s vzorem configu, nebo vystupni soubor!")
+        print_help()
+        sys.exit(1)
+
+    if custom_type not in 'ABDEFGHIJKLMNOPQRSTUVWXYZ':
+        print("Neni zadan platny typ configu! Zadejte jeden znak velke abecedy, vyjma C.")
+        print_help()
+        sys.exit(1)
+    selected_type = custom_type
+    filename_sample = argv[1]
+    filename_config = argv[2]
+
+if not os.path.isfile(filename_sample):
+    print("Soubor '%s' neexistuje!" % filename_sample)
+    sys.exit(1)
 
 sample = read_file(filename_sample)
 
@@ -395,7 +425,9 @@ new_config = generate_config(
     generated_conf_signature,
     placeholders,
     aes_decryption_key,
-    rsa_decryption_key)
+    rsa_decryption_key,
+    ''.join(conf_types.values()) + (custom_type if custom_type else '')
+    )
 
 if config == new_config:
     print_bold_green("beze zmeny")
