@@ -1,6 +1,6 @@
 {
   "name": "compile_conf",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Simple builder configuration files from environment, encrypted values or user input",
   "bin": {
     "compile_conf": "./compile_conf"
