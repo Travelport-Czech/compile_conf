@@ -28,6 +28,9 @@ conf_types = {
     'robots': 'R',
     'pipeline': 'L'
 }
+
+AVAILABLE_TYPES = "ABDEFGHIJKLMNOPQRSTUVWXYZ"
+
 generated_conf_signature = 'tento soubor vznikl generovanim pomoci compile_conf'
 
 
@@ -379,7 +382,7 @@ else:
         print_help()
         sys.exit(1)
 
-    if custom_type not in 'ABDEFGHIJKLMNOPQRSTUVWXYZ':
+    if custom_type not in AVAILABLE_TYPES:
         print("Neni zadan platny typ configu! Zadejte jeden znak velke abecedy, vyjma C.")
         print_help()
         sys.exit(1)
@@ -426,7 +429,7 @@ new_config = generate_config(
     placeholders,
     aes_decryption_key,
     rsa_decryption_key,
-    ''.join(conf_types.values()) + (custom_type if custom_type else '')
+    AVAILABLE_TYPES
     )
 
 if config == new_config:
